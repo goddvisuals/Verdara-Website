@@ -10,7 +10,7 @@ import Quote from './pages/Quote.jsx'
 import NotFound from './pages/NotFound.jsx'
 
 const pageMetadata = {
-  '/': ['Property Services in Edmonton', 'Exterior property solutions for commercial properties and homeowners across Edmonton and surrounding areas.'],
+  '/': ['Verdara Property Solutions | Property Services Edmonton', 'Commercial property services in Edmonton and surrounding areas, including landscaping, snow removal, exterior maintenance, grading, fencing and more.'],
   '/services/commercial': ['Commercial Services', 'Explore commercial grounds maintenance, snow removal, exterior construction, grading, drainage, and responsive property services in Edmonton and surrounding areas.'],
   '/services/residential': ['Residential Services', 'Seasonal yard care, snow removal, grading, drainage, fencing, decks, and responsive exterior property services for homeowners in Edmonton and surrounding areas.'],
   '/about': ['About Verdara', 'A dependable property maintenance partner for property managers, commercial property owners, businesses, and multi-site clients in Edmonton and surrounding areas.'],
@@ -29,8 +29,9 @@ function RouteEffects() {
   useEffect(() => {
     const path = pathname.replace(/\/$/, '') || '/'
     const [title, description] = pageMetadata[path] || ['Page Not Found', 'Explore commercial property services from Verdara Property Solutions.']
-    document.title = `${title} | Verdara Property Solutions`
+    document.title = path === '/' ? title : `${title} | Verdara Property Solutions`
     document.querySelector('meta[name="description"]')?.setAttribute('content', description)
+    document.querySelector('link[rel="canonical"]')?.setAttribute('href', `https://verdarapropertysolutions.com${path}`)
     const target = hash ? document.getElementById(hash.slice(1)) : null
     if (target) {
       target.scrollIntoView()

@@ -13,32 +13,62 @@ function Field({ id, label, ...props }) {
 
 export default function QuoteForm() {
   const [serviceError, setServiceError] = useState(false)
-  const [previewComplete, setPreviewComplete] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState('idle')
+  const submittingRef = useRef(false)
   const firstServiceRef = useRef(null)
   const statusRef = useRef(null)
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
+    if (submittingRef.current) return
+
     const values = new FormData(event.currentTarget)
     if (values.getAll('services').length === 0) {
+      setSubmitStatus('idle')
       setServiceError(true)
       firstServiceRef.current?.focus()
       return
     }
     setServiceError(false)
-    setPreviewComplete(true)
-    // Preview only: do not send, log, or persist personal information.
-    requestAnimationFrame(() => statusRef.current?.focus())
+    submittingRef.current = true
+    setSubmitStatus('sending')
+
+    try {
+      const response = await fetch('https://formspree.io/f/xppqzede', {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(30000),
+        body: JSON.stringify({
+          name: values.get('name'),
+          Company: values.get('company'),
+          // Formspree uses the email field as the reply-to address.
+          email: values.get('email'),
+          Phone: values.get('phone'),
+          'Property address or service area': values.get('property-address'),
+          'Property type': values.get('property-type'),
+          'Single property or multiple locations': values.get('locations') === 'multiple' ? 'Multiple locations' : 'Single property',
+          'Services required': values.getAll('services').join('\n'),
+          'Project / maintenance details': values.get('details'),
+        }),
+      })
+      if (!response.ok) throw new Error('Submission failed')
+      setSubmitStatus('success')
+    } catch {
+      setSubmitStatus('error')
+    } finally {
+      submittingRef.current = false
+      requestAnimationFrame(() => statusRef.current?.focus())
+    }
   }
 
   function handleChange(event) {
-    setPreviewComplete(false)
+    if (!submittingRef.current) setSubmitStatus('idle')
     if (event.target.name === 'services') setServiceError(false)
   }
 
   return (
-    <form className="quote-form" onSubmit={handleSubmit} onChange={handleChange} aria-label="Commercial property inquiry" aria-describedby="form-preview-note">
-      <div className="form-preview-note" id="form-preview-note"><strong>Quote form preview</strong><p>This form is not connected yet. You can complete the fields, but no request will be sent.</p></div>
+    <form className="quote-form" onSubmit={handleSubmit} onChange={handleChange} aria-label="Commercial property inquiry" aria-describedby="form-note">
+      <div className="form-preview-note" id="form-note"><strong>Request a quote</strong><p>Tell us about your property and the services you need. Our team will review your request and get in touch.</p></div>
       <p className="form-required-note">Fields marked <span aria-hidden="true">*</span><span className="sr-only">with an asterisk</span> are required.</p>
 
       <fieldset className="form-section">
@@ -106,9 +136,10 @@ export default function QuoteForm() {
           <p className="field-hint" id="details-hint">Include any access considerations, recurring maintenance needs, or priorities.</p>
         </div>
       </fieldset>
-      <div className="form-submit"><button type="submit" className="button button-primary">Submit Request <Arrow /></button><p>Preview only. Your details will not be sent or saved.</p></div>
-      <div ref={statusRef} className={`form-status ${previewComplete ? 'is-visible' : ''}`} tabIndex={-1} role="status" aria-live="polite">
-        {previewComplete && <><strong>Preview complete — no request was sent.</strong><p>The required fields are complete. Online quote requests will be available once this form is connected.</p></>}
+      <div className="form-submit"><button type="submit" className="button button-primary" disabled={submitStatus === 'sending'} aria-busy={submitStatus === 'sending'}>{submitStatus === 'sending' ? 'Sending…' : 'Submit Request'} <Arrow /></button><p>We’ll use your details to respond to your request.</p></div>
+      <div ref={statusRef} className={`form-status ${submitStatus === 'success' || submitStatus === 'error' ? 'is-visible' : ''}`} tabIndex={-1} role="status" aria-live="polite">
+        {submitStatus === 'success' && <><strong>Your request has been sent successfully.</strong><p>Thank you for contacting Verdara Property Solutions. Our team will review your request and get in touch.</p></>}
+        {submitStatus === 'error' && <><strong>We couldn’t confirm your request was sent.</strong><p>Please check your connection and try again. Your details are still in the form.</p></>}
       </div>
     </form>
   )

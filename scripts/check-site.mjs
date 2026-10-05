@@ -111,7 +111,10 @@ try {
   assert.match(form, /type="tel"/, 'Phone uses the appropriate mobile keyboard')
   assert.equal([...form.matchAll(/type="checkbox"/g)].length, 13, 'All 12 services plus scope assistance')
   assert.equal([...form.matchAll(/type="radio"/g)].length, 2, 'Single and multiple location choices')
-  assert.ok(form.includes('no request will be sent'), 'Form clearly identifies preview status')
+  assert.doesNotMatch(form, /Quote form preview|This form is not connected yet|Preview only|Preview complete|no request will be sent/i, 'Form contains no preview-only wording')
+  assert.match(form, /aria-describedby="form-note"/, 'Form references its live request instructions')
+  assert.match(form, /id="form-note"[^>]*><strong>Request a quote<\/strong>/, 'Form introduces live quote requests')
+  assert.match(form, /<button\b[^>]*type="submit"[^>]*aria-busy="false"/, 'Form starts ready to submit')
 
   for (const [file, hash] of Object.entries(expectedImages)) {
     const actual = createHash('sha256').update(readFileSync(`public/assets/images/${file}`)).digest('hex')
